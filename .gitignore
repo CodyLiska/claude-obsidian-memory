@@ -1,0 +1,30 @@
+# ============================================
+# PERSONAL FILES — never commit these
+# ============================================
+
+# Your live session log — personal activity data
+session-log.md
+
+# Your personal project memory files
+# The example-project.md and index.md are kept as they are generic
+projects/*.md
+!projects/example-project.md
+
+# ============================================
+# macOS system files
+# ============================================
+.DS_Store
+**/.DS_Store
+
+# ============================================
+# Everything else is tracked and public
+# ============================================
+# conventions.md        ← tracked (generic enough, users customize)
+# decisions-log.md      ← tracked (empty template)
+# lessons-learned.md    ← tracked (scrubbed example)
+# recurring-tasks.md    ← tracked (fully generic)
+# windows-setup.md      ← tracked (scrubbed paths)
+# CLAUDE.md             ← tracked (scrubbed)
+# README.md             ← tracked
+# stack-notes/          ← tracked (fully generic)
+# templates/            ← tracked (scrubbed paths)

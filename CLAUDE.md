@@ -19,13 +19,15 @@ for all projects.
 ## Standing Instructions
 
 ### At the start of every session
-1. Read `11_Claude-Memory/conventions.md` — always follow these standards
-2. Read the last 2-3 entries in `11_Claude-Memory/session-log.md` — understand recent context
-3. Check if a project file exists in `11_Claude-Memory/projects/[project-name].md` and read it
-4. Check `11_Claude-Memory/lessons-learned.md` before debugging anything — the fix may already be documented
-5. Read `11_Claude-Memory/recurring-tasks.md` — these rules apply for the entire session
+
+1. Read `<your-vault-name>/conventions.md` — always follow these standards
+2. Read the last 2-3 entries in `<your-vault-name>/session-log.md` — understand recent context
+3. Check if a project file exists in `<your-vault-name>/projects/[project-name].md` and read it
+4. Check `<your-vault-name>/lessons-learned.md` before debugging anything — the fix may already be documented
+5. Read `<your-vault-name>/recurring-tasks.md` — these rules apply for the entire session
 
 ### During every session
+
 - Follow `conventions.md` standards without being reminded
 - Follow all rules in `recurring-tasks.md` — especially the **Write to the Vault Immediately** section
 - Write to `lessons-learned.md` immediately when a bug is resolved after multiple attempts — do not wait until wrap-up
@@ -34,11 +36,12 @@ for all projects.
 - Never read from or reference any credentials folder in the vault — that folder is off limits
 
 ### At the end of every session
+
 - Wait for the user to say **"wrap up this session"** before writing wrap-up entries
-- Always update `11_Claude-Memory/session-log.md` — note anything already written mid-session so it is not double-logged
-- Update `11_Claude-Memory/projects/index.md` — reflect any status changes and today's date
+- Always update `<your-vault-name>/session-log.md` — note anything already written mid-session so it is not double-logged
+- Update `<your-vault-name>/projects/index.md` — reflect any status changes and today's date
 - Conditionally update `decisions-log.md` and `lessons-learned.md` if anything was not already written mid-session
-- Create or update the project file at `11_Claude-Memory/projects/[project-name].md`
+- Create or update the project file at `<your-vault-name>/projects/[project-name].md`
 - Update `CLAUDE.md` in the project root to reflect current state and next steps
 
 ---
@@ -47,7 +50,7 @@ for all projects.
 
 ```
 <your-vault-name>/
-  11_Claude-Memory/
+  <your-vault-name>/
     CLAUDE.md              ← this file (global instructions)
     conventions.md         ← coding standards
     decisions-log.md       ← architectural decisions log
@@ -79,8 +82,8 @@ for all projects.
 Replace these with your actual paths after setup:
 
 - **Vault root:** `<your-vault-path>/`
-- **Memory root:** `<your-vault-path>/11_Claude-Memory/`
-- **Projects root:** `<your-vault-path>/11_Claude-Memory/projects/`
+- **Memory root:** `<your-vault-path>/<your-vault-name>/`
+- **Projects root:** `<your-vault-path>/<your-vault-name>/projects/`
 - **Dev root:** `<your-dev-root>/`
 
 ---

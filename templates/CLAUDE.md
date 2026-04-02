@@ -10,11 +10,11 @@
 
 At the start of every session, read these files from the Obsidian vault:
 
-- `<your-vault-path>/11_Claude-Memory/conventions.md`
-- `<your-vault-path>/11_Claude-Memory/session-log.md` — last 2 entries only
+- `<your-vault-path>/<your-vault-name>/conventions.md`
+- `<your-vault-path>/<your-vault-name>/session-log.md` — last 2 entries only
 
 Then check if a project-level CLAUDE.md exists in the current directory and read it.
-If a project file exists at `11_Claude-Memory/projects/[project-name].md`, read that too.
+If a project file exists at `<your-vault-name>/projects/[project-name].md`, read that too.
 
 ---
 
@@ -46,18 +46,10 @@ All projects live under:
 
 ```
 <your-dev-root>/
-  01_Javascript/
-  02_Python/
-  03_AI/
-  04_Excel/
-  05_Video-Games/
-  06_Reverse-Engineering/
-  07_Scripts/
 ```
 
 ---
 
 ## Off-Limits
 
-- Never read or write to `99_Credentials/` in the Obsidian vault
 - Never store secrets, API keys, or tokens in any memory bank file

@@ -23,10 +23,18 @@ projects/*.md
 # Everything else is tracked and public
 # ============================================
 # conventions.md        ← tracked (generic enough, users customize)
-# recurring-tasks.md    ← tracked (fully generic)
 # windows-setup.md      ← tracked (scrubbed paths)
-# CLAUDE.md             ← tracked (scrubbed)
 # README.md             ← tracked
 # stack-notes/          ← tracked (fully generic)
 # templates/            ← tracked (scrubbed paths)
-# hooks/                ← tracked (fully generic)
+
+
+hooks/*
+CLAUDE.md
+decisions-log.md
+decisions-summary.md
+dev-notes.md
+recurring-tasks.md
+lessons-learned.md
+lessons-summary.md
+session-state.md

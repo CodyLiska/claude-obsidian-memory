@@ -8,33 +8,57 @@ No more re-explaining your stack. No more losing context between sessions.
 
 ## How It Works
 
-Claude Code reads a `CLAUDE.md` file from your project root automatically. This system uses that file to instruct Claude to connect to your Obsidian vault via MCP and load relevant context before starting work.
+Claude Code reads `~/.claude/CLAUDE.md` automatically at the start of every session. This system uses that file to instruct Claude to connect to your Obsidian vault via MCP and load relevant context before starting work.
+
+**Token efficiency is the core design principle.** The vault contains many files — loading all of them every session would waste 25,000+ tokens. Instead, only the essentials load at startup. Everything else loads on demand when the trigger condition is met.
+
+| Loaded at startup (~7,000 tokens)                   | Loaded on demand                                               |
+| --------------------------------------------------- | -------------------------------------------------------------- |
+| `session-state.md` — compact working state snapshot | `lessons-learned.md` — when a matching bug entry is found      |
+| `lessons-summary.md` — one-liner bug index          | `decisions-log.md` — when making an architectural decision     |
+| `decisions-summary.md` — one-liner decision index   | `stack-notes/*.md` — before the first code task for that stack |
+| `conventions.md` — coding standards                 | `session-log.md` — only at wrap-up                             |
+| `recurring-tasks.md` — standing rules               | `projects/[name].md` — when starting project work              |
 
 ```
-Your Project/
-  CLAUDE.md        ← tells Claude to load vault context
+~/.claude/
+  CLAUDE.md          ← global instructions (copy of vault version)
+  settings.json      ← MCP server config + hooks + compaction threshold
+  hooks/
+    pre-compact.sh   ← writes checkpoint before context compaction
+  agents/
+    vault-reader.md     ← reads vault files in its own context
+    codebase-explorer.md← searches codebases without polluting main context
+    test-runner.md      ← runs tests and returns pass/fail summaries
 
-Obsidian Vault/
-  11_Claude-Memory/
-    conventions.md         ← your coding standards
-    session-log.md         ← running log of all sessions
-    decisions-log.md       ← architectural decisions
-    lessons-learned.md     ← bugs and hard-won fixes
-    projects/
-      index.md             ← auto-generated project overview (not in repo)
-      your-project.md      ← per-project deep context (not in repo)
-    stack-notes/           ← framework reference notes
-    templates/             ← CLAUDE.md templates per project type
+claude-obsidian-memory/
+  CLAUDE.md              ← source of truth for global instructions
+  conventions.md         ← your coding standards
+  session-state.md       ← compact working state (overwritten each session)
+  lessons-summary.md     ← one-liner bug index (loaded at startup)
+  decisions-summary.md   ← one-liner decision index (loaded at startup)
+  lessons-learned.md     ← full bug log (loaded on demand)
+  decisions-log.md       ← full decision log (loaded on demand)
+  session-log.md         ← running session history (loaded at wrap-up)
+  recurring-tasks.md     ← standing rules for every session
+  projects/
+    index.md             ← auto-generated project overview (not in repo)
+    your-project.md      ← per-project deep context (not in repo)
+  stack-notes/           ← framework reference notes
+  templates/             ← CLAUDE.md templates per project type
+  agents/                ← subagent definitions (source of truth)
 ```
 
 ---
 
 ## Features
 
-- **Auto-loads context** — conventions, session history, and project state on every session start
-- **Incremental writes** — logs bugs and decisions to the vault immediately when they happen, not just at wrap-up
-- **Compaction protection** — a `PreCompact` hook flushes important context to the vault before Claude Code compacts the context window
-- **Typed templates** — pre-built `CLAUDE.md` templates for frontend, API, Python, and game dev projects
+- **Token-efficient loading** — ~7,000 tokens at startup instead of 25,000+; large log files load only when relevant
+- **Auto-loads context** — session state, bug index, decision index, and coding standards on every session start
+- **Incremental writes** — logs bugs and decisions to the vault immediately when they happen via MUST triggers, not just at wrap-up
+- **Compaction protection** — a `PreCompact` hook writes an AI-generated session summary and a recovery checkpoint before context compaction
+- **Subagents** — `vault-reader`, `codebase-explorer`, and `test-runner` keep large outputs out of the main context window
+- **Typed templates** — pre-built `CLAUDE.md` templates for frontend (Vue), API (Node/Express), Python, and game dev (Phaser) projects
 - **Stack notes** — reusable reference notes for Vue, Node/Express/MongoDB, React Native, Phaser, and Python
 - **Projects index** — bird's-eye view of all your projects and their status, auto-generated by Claude
 - **Multi-machine** — works across macOS and Windows (see setup notes)
@@ -87,42 +111,17 @@ Then in Obsidian:
 
 ### Step 2 — Copy the Memory Bank to Your Vault
 
-Copy the `11_Claude-Memory/` folder from this repo into your Obsidian vault root:
+Copy the `claude-obsidian-memory/` folder from this repo into your Obsidian vault root:
 
 ```
 Your Vault/
-  11_Claude-Memory/    ← paste here
+  claude-obsidian-memory/    ← paste here
   Your other notes...
 ```
 
 ### Step 3 — Configure Claude Code
 
-Add the Obsidian MCP server to `~/.claude/settings.json` (create it if it doesn't exist):
-
-```json
-{
-  "mcpServers": {
-    "obsidian": {
-      "type": "sse",
-      "url": "http://localhost:22360/sse"
-    }
-  }
-}
-```
-
-This connects Claude Code to Obsidian via SSE regardless of which project directory you're in.
-
-### Step 4 — Set Up the PreCompact Hook
-
-The `PreCompact` hook flushes vault writes before Claude Code compacts the context window on long sessions.
-
-```bash
-mkdir -p ~/.claude/hooks
-cp hooks/pre-compact.sh ~/.claude/hooks/pre-compact.sh
-chmod +x ~/.claude/hooks/pre-compact.sh
-```
-
-Then add the hook to `~/.claude/settings.json`:
+Add the Obsidian MCP server and compaction threshold to `~/.claude/settings.json` (create it if it doesn't exist):
 
 ```json
 {
@@ -132,6 +131,37 @@ Then add the hook to `~/.claude/settings.json`:
       "url": "http://localhost:22360/sse"
     }
   },
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "60"
+  }
+}
+```
+
+The MCP server connects Claude Code to Obsidian via SSE regardless of which project directory you're in. The `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` triggers compaction at 60% context usage (instead of ~83-95%), giving the PreCompact hook more room to write a useful checkpoint before context is lost.
+
+### Step 4 — Set Up the PreCompact Hook
+
+The `PreCompact` hook runs before Claude Code compacts the context window. It generates an AI summary of the session and writes a recovery checkpoint to `session-state.md` so context survives compaction.
+
+```bash
+mkdir -p ~/.claude/hooks
+cp hooks/pre-compact.sh ~/.claude/hooks/pre-compact.sh
+chmod +x ~/.claude/hooks/pre-compact.sh
+```
+
+Then add the hook to `~/.claude/settings.json`. **Use the absolute path — `~` expansion is unreliable in hook commands:**
+
+```json
+{
+  "mcpServers": {
+    "obsidian": {
+      "type": "sse",
+      "url": "http://localhost:22360/sse"
+    }
+  },
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "60"
+  },
   "hooks": {
     "PreCompact": [
       {
@@ -139,7 +169,7 @@ Then add the hook to `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/pre-compact.sh"
+            "command": "/Users/<your-username>/.claude/hooks/pre-compact.sh"
           }
         ]
       }
@@ -150,42 +180,67 @@ Then add the hook to `~/.claude/settings.json`:
 
 ### Step 5 — Customize Your Conventions
 
-Open `11_Claude-Memory/conventions.md` and update it to match your preferred stack, coding style, and standards. This file is read at the start of every session — it's the most important file to personalize.
+Open `<your-vault-name>/conventions.md` and update it to match your preferred stack, coding style, and standards. This file is read at the start of every session — it's the most important file to personalize.
 
 ### Step 6 — Add CLAUDE.md to a Project
 
-Copy the appropriate template from `11_Claude-Memory/templates/` into your project root and rename it to `CLAUDE.md`. Fill in the Project section with your project details.
+Copy the appropriate template from `<your-vault-name>/templates/` into your project root and rename it to `CLAUDE.md`. Fill in the Project section with your project details.
 
 Available templates:
-- `CLAUDE.md` — generic base template
+
 - `CLAUDE-api.md` — Node + Express + MongoDB
 - `CLAUDE-frontend.md` — Vue + Tailwind
 - `CLAUDE-python.md` — Python
 - `CLAUDE-game.md` — Phaser 3 + Vite
 
-**Update the vault path in the template** to match your vault location before using it.
+**Update the vault path placeholders** in the template to match your vault location before using it.
 
-### Step 7 — Update Global CLAUDE.md Paths
+### Step 7 — Deploy the Global CLAUDE.md
 
-Open `11_Claude-Memory/CLAUDE.md` and `11_Claude-Memory/windows-setup.md` and replace `<your-vault-path>` and `<your-vault-name>` with your actual vault details.
+The vault copy of `CLAUDE.md` is the source of truth, but Claude Code only loads it globally when it lives at `~/.claude/CLAUDE.md`. Copy it there after filling in your paths:
+
+```bash
+cp "<your-vault-name>/CLAUDE.md" ~/.claude/CLAUDE.md
+```
+
+Open both copies and replace `<your-vault-path>` with your actual vault path.
 
 **macOS example:**
+
 ```
-~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Your Vault Name
+/Users/<your-username>/Library/Mobile Documents/iCloud~md~obsidian/Documents/Your Vault Name
 ```
 
 **Windows example:**
+
 ```
 C:\Users\<your-username>\iCloudDrive\iCloud~md~obsidian\Documents\Your Vault Name
 ```
 
-### Step 8 — Generate Your Projects Index
+When you edit `CLAUDE.md` in the future, edit the vault copy first, then re-copy to `~/.claude/CLAUDE.md`.
+
+### Step 8 — Install the Subagents
+
+Copy the subagent definitions to `~/.claude/agents/`:
+
+```bash
+mkdir -p ~/.claude/agents
+cp "<your-vault-name>/agents/vault-reader.md" ~/.claude/agents/vault-reader.md
+cp "<your-vault-name>/agents/codebase-explorer.md" ~/.claude/agents/codebase-explorer.md
+cp "<your-vault-name>/agents/test-runner.md" ~/.claude/agents/test-runner.md
+```
+
+These run as Haiku-model subprocesses and keep large outputs (grep results, test logs, vault file reads) out of the main context window.
+
+The vault `agents/` folder is the source of truth — re-copy to `~/.claude/agents/` if you edit them.
+
+### Step 9 — Generate Your Projects Index
 
 `projects/index.md` is not included in the repo — it's personal data. Generate your own by running Claude Code from your development root and using this prompt:
 
 ```
 Scan all my project folders under <your-dev-root> and create a projects index at
-<your-vault-path>/11_Claude-Memory/projects/index.md
+<your-vault-path>/<your-vault-name>/projects/index.md
 
 For each project, look at package.json, requirements.txt, README.md, and other
 config files to infer the stack. Categorize as Active (modified in last 30 days)
@@ -208,6 +263,7 @@ Claude will scan your folders and generate the index automatically. Re-run this 
 ```
 
 Claude will automatically:
+
 - Load conventions, session history, and project context on start
 - Write to `lessons-learned.md` immediately when a bug is resolved
 - Write to `decisions-log.md` immediately when a significant decision is made
@@ -218,7 +274,7 @@ Claude will automatically:
 
 ## Adding a New Project
 
-1. Copy the appropriate template from `11_Claude-Memory/templates/`
+1. Copy the appropriate template from `<your-vault-name>/templates/`
 2. Rename it to `CLAUDE.md` and place it in your project root
 3. Fill in the Project section
 4. Start a Claude Code session — Claude will create the project memory file automatically at the end of the first session
@@ -227,7 +283,7 @@ Claude will automatically:
 
 ## Windows Setup
 
-See `11_Claude-Memory/windows-setup.md` for full Windows and WSL setup instructions.
+See `<your-vault-name>/windows-setup.md` for full Windows and WSL setup instructions.
 
 Key note: **always run Claude Code from Windows Terminal (PowerShell), not WSL** — iCloud Drive is not accessible from within WSL.
 
@@ -236,19 +292,26 @@ Key note: **always run Claude Code from Windows Terminal (PowerShell), not WSL**
 ## Vault Structure
 
 ```
-11_Claude-Memory/
-  .gitignore             ← excludes personal files from git
-  CLAUDE.md              ← global standing instructions
-  conventions.md         ← your coding standards (customize this)
-  decisions-log.md       ← architectural decisions log
-  lessons-learned.md     ← bugs and gotchas log
-  recurring-tasks.md     ← standing rules for every session
-  session-log.md         ← per-session activity log (gitignored)
-  windows-setup.md       ← Windows machine setup guide
+<your-vault-name>/
+  .gitignore               ← excludes personal files from git
+  CLAUDE.md                ← global instructions (source of truth — copy to ~/.claude/CLAUDE.md)
+  conventions.md           ← your coding standards (customize this)
+  recurring-tasks.md       ← standing rules for every session
+  session-state.md         ← compact working state snapshot (gitignored — overwritten each session)
+  session-log.md           ← full session history (gitignored)
+  lessons-summary.md       ← one-liner bug index (loaded at startup)
+  lessons-learned.md       ← full bugs and gotchas log (loaded on demand)
+  decisions-summary.md     ← one-liner decision index (loaded at startup)
+  decisions-log.md         ← full architectural decisions log (loaded on demand)
+  windows-setup.md         ← Windows machine setup guide
+  agents/
+    vault-reader.md        ← reads vault files in its own context (copy to ~/.claude/agents/)
+    codebase-explorer.md   ← searches codebases without polluting main context
+    test-runner.md         ← runs tests and returns pass/fail summaries
   projects/
-    index.md             ← your project overview (gitignored — auto-generated)
-    example-project.md   ← example of what a project memory file looks like
-    [project-name].md    ← your project files (gitignored)
+    index.md               ← your project overview (gitignored — auto-generated)
+    example-project.md     ← example of what a project memory file looks like
+    [project-name].md      ← your project files (gitignored)
   stack-notes/
     vue-tailwind.md
     node-express-mongo.md
@@ -256,14 +319,13 @@ Key note: **always run Claude Code from Windows Terminal (PowerShell), not WSL**
     phaser.md
     python.md
   templates/
-    CLAUDE.md            ← generic template
-    CLAUDE-api.md        ← Node + Express + MongoDB
-    CLAUDE-frontend.md   ← Vue + Tailwind
-    CLAUDE-python.md     ← Python
-    CLAUDE-game.md       ← Phaser 3 + Vite
+    CLAUDE-api.md          ← Node + Express + MongoDB
+    CLAUDE-frontend.md     ← Vue + Tailwind
+    CLAUDE-python.md       ← Python
+    CLAUDE-game.md         ← Phaser 3 + Vite
 
 hooks/
-  pre-compact.sh         ← PreCompact hook script (copy to ~/.claude/hooks/)
+  pre-compact.sh           ← PreCompact hook script (copy to ~/.claude/hooks/)
 ```
 
 ---
@@ -277,6 +339,7 @@ Stack notes and templates for additional frameworks are welcome. If you add supp
 ## Credits
 
 Built using:
+
 - [obsidian-claude-code-mcp](https://github.com/iansinnott/obsidian-claude-code-mcp) by iansinnott
 - [Claude Code](https://claude.ai/code) by Anthropic
 

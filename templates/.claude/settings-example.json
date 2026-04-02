@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "obsidian": {
+      "type": "sse",
+      "url": "http://localhost:22360/sse"
+    }
+  },
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "60"
+  },
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/<your-username>/.claude/hooks/pre-compact.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

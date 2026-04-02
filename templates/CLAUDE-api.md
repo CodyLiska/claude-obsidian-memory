@@ -9,10 +9,10 @@
 
 At the start of every session, read these files from the Obsidian vault:
 
-- `<your-vault-path>/11_Claude-Memory/conventions.md`
-- `<your-vault-path>/11_Claude-Memory/session-log.md`
-- `<your-vault-path>/11_Claude-Memory/stack-notes/node-express-mongo.md`
-- `<your-vault-path>/11_Claude-Memory/projects/[PROJECT-NAME].md` if it exists
+- `<your-vault-path>/<your-vault-name>/conventions.md`
+- `<your-vault-path>/<your-vault-name>/session-log.md`
+- `<your-vault-path>/<your-vault-name>/stack-notes/node-express-mongo.md`
+- `<your-vault-path>/<your-vault-name>/projects/[PROJECT-NAME].md` if it exists
 
 ---
 
@@ -26,7 +26,7 @@ When wrapping up, Claude will:
 2. Append to `decisions-log.md` if a significant decision was made
 3. Append to `lessons-learned.md` if a notable bug was resolved
 4. Create or update `projects/[PROJECT-NAME].md` at the absolute vault path:
-   `<your-vault-path>/11_Claude-Memory/projects/[PROJECT-NAME].md`
+   `<your-vault-path>/<your-vault-name>/projects/[PROJECT-NAME].md`
 5. Update `projects/index.md` to reflect current status and last worked date
 
 ---

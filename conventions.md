@@ -1,6 +1,6 @@
 # Coding Conventions
 
-> These are Cody's personal coding standards. Claude should follow these in all sessions unless explicitly told otherwise for a specific project.
+> These are MY personal coding standards. Claude should follow these in all sessions unless explicitly told otherwise for a specific project.
 
 ---
 

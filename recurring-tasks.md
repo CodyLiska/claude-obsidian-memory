@@ -2,6 +2,9 @@
 
 > Things Claude should always do or check regardless of project.
 > These are standing rules that apply across every session.
+>
+> **Note:** This file is loaded on demand (on first tool use), not at session start.
+> Once loaded, follow these rules for the rest of the session.
 
 ---
 
@@ -46,15 +49,25 @@ Entry format for immediate decisions-log write:
 
 ---
 
+## Token Efficiency Rules
+
+- **Do not read vault files speculatively** — only read a file when its content is needed for the current task
+- **Use subagents for exploration** — codebase searches, test runs, and vault lookups for background context should go through subagents when possible
+- **Suggest compaction at natural breakpoints** — after completing a feature, fixing a bug, or finishing research, suggest `/compact` before starting the next task
+- **Keep vault writes concise** — session-log entries should be under 10 lines, lessons-learned entries under 15 lines
+
+---
+
 ## Before Wrapping Up
 
 - Confirm any new files created are in the right location
 - If new env vars were added, update `.env.example` if one exists
 - If the project has a test suite, confirm it still passes
 - If a new dependency was added, confirm it's in `package.json` or `requirements.txt`
+- Overwrite `session-state.md` with current session's working state snapshot
 - Update `CLAUDE.md` in the project root to reflect current state and next steps
 - Update `projects/index.md` with current status and today's date
-- Create or update `11_Claude-Memory/projects/[project-name].md`
+- Create or update `<your-vault-name>/projects/[project-name].md`
 - Append to `session-log.md` — note anything already written mid-session so it's not double-logged
 
 ---
